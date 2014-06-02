@@ -9,9 +9,16 @@ import Data.Maybe
 import Text.XML.Light
 import qualified Data.ByteString as B
 import Data.Time
+import Data.List
+import Data.Time.Clock
+import System.Locale
+import Data.Time.LocalTime
+import System.Console.Terminfo.Base
+import Text.PrettyPrint.Free
+import System.Console.Terminfo.PrettyPrint
 
 data Channel = Channel {
-    id :: String
+    cid :: String
     , lang :: String
     , name :: String
     , url :: String
@@ -19,14 +26,56 @@ data Channel = Channel {
 } deriving (Show, Eq)
 
 data Program = Program {
-    start :: String
-    , stop :: String
+    start :: UTCTime
+    , stop :: UTCTime
     , title :: String
     , description :: String
 } deriving (Show, Eq)
 
+-- minum title, if we can't fit with 15, break the row.
+minTitle = 20
+
 conv s = LB.fromChunks [C8.pack s]
 reconv = C8.unpack . B.concat . LB.toChunks
+
+toDate :: String -> Maybe UTCTime
+toDate str = parseTime defaultTimeLocale "%Y%m%d%H%M%S %z" str
+
+showHour t tz = do 
+    let local = utcToLocalTime tz t
+        in formatTime defaultTimeLocale "%R" local 
+
+-- worldcup in choosing bad colors
+highligt sta sto current
+    | diffUTCTime sta current < 0 && diffUTCTime sto current < 0 = red
+    | diffUTCTime sta current < 0 && diffUTCTime sto current > 0 = magenta
+    | otherwise = white
+
+entry Nothing _ i _ = fill i space
+entry (Just (Program sta sto t d)) tz i current = highligt sta sto current $ 
+                        text "[" <> (text $ showHour sta tz) 
+                        <> text "] " <> fill (i-9) (text $ take (i-9) t) <> space
+
+fillNoth cs =
+    let longest = foldr (max . length) 0 cs
+    in map (addNoth longest) cs
+    where addNoth long l = map Just l ++ replicate (long - length l) Nothing
+
+-- min is how small a title can be to make sense, 
+-- max is how much width you want to use to print
+showPrograms tz min max _ [] = empty
+showPrograms tz min max current cs = 
+    let num = div max min
+        cur = take num cs
+        after = drop num cs
+        in showGroup tz max current cur <> showPrograms tz min max current after
+
+--showing :: [Channel] -> String
+--showGroup = undefined
+showGroup tz max current cs = (hcat $ map (fill maxtitle . text . name) cs) <> hardline <> chans
+    where maxtitle = div max $ length cs
+          zprogs = transpose . fillNoth $ map programs cs
+          chans = hcat $ map (\x -> (hcat $ map (\y -> entry y tz maxtitle current) x) <> hardline) zprogs
 
 downloadURL :: String -> IO (Either String String)
 downloadURL url =
@@ -56,6 +105,13 @@ xml url = do
 gunzip str = do
     reconv . decompress . conv $ str
 
+-- this should work on all unix terminal
+getCols = do
+    t <- setupTerm "vt100"
+    let Just x = getCapability t (tiGetNum "cols")
+    return x
+
+-- safer version for use inside of a Maybe Monad.
 headm [] = Nothing
 headm (x:xs) = Just x
 
@@ -69,15 +125,16 @@ xmltoChannel date e = do
         base <- headm . map cdData . onlyText . elContent $ b
         return $ Channel id lang title (base ++ id ++ "_" ++ date ++ ".xml.gz") []
 
-xmltoAir :: Element -> Maybe Program
-xmltoAir e = do
-    start <- findAttr (QName "start" Nothing Nothing) e
-    stop <- findAttr (QName "stop" Nothing Nothing) e
+-- This is broken, looks nice atleast.
+xmltoProgram :: Element -> Maybe Program
+xmltoProgram e = do
+    start <- findAttr (QName "start" Nothing Nothing) e >>= toDate
+    stop <- findAttr (QName "stop" Nothing Nothing) e >>= toDate
     t <- findChild (QName "title" Nothing Nothing) e
     d <- findChild (QName "desc" Nothing Nothing) e
     title <- headm . map cdData . onlyText . elContent $ t
     desc <- headm . map cdData . onlyText . elContent $ d
-    return (Program start stop title desc)
+    return (Program start start title desc)
 
 takeJust :: [Maybe b] -> [b]
 takeJust a = map fromJust $ filter (\x ->
@@ -105,7 +162,7 @@ getPrograms url = do
     case parseXMLDoc s of
         Just p -> 
             let f = findElements (QName "programme" Nothing Nothing) p
-            in return $ map xmltoAir f
+            in return $ map xmltoProgram f
         Nothing -> return []
 
 updateChannel :: Channel -> IO Channel
@@ -121,4 +178,12 @@ getTvToday uri channels = do
    t <- mapM updateChannel w
    return t
 
--- needs an output format or something
+showTvToday uri channels = do
+    chans <- getTvToday uri channels
+    width <- getCols
+    tz <- getCurrentTimeZone
+    current <- getCurrentTime
+    display $ showPrograms tz minTitle width current chans
+
+main = do
+    showTvToday "http://tv.swedb.se/xmltv/channels.xml.gz" ["SVT 1", "TV3"]
