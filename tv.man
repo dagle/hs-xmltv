@@ -1,0 +1,50 @@
+.TH TV 1
+.SH NAME
+tv \- display whats on tv
+.SH SYNOPSIS
+.B tv
+[
+.I options
+] [
+.I channels
+]
+.SH DESCRIPTION
+.B tv
+is a commandline tool for showing whats on tv. tv uses the XmlTV format for parsing
+and requires an url for the channel database. tv support both commandline option or using a config file
+.PP
+tv will display all selected channels or if no channels are selected, all channels form the channels db.
+.SH OPTIONS
+.TP
+.B -w url
+Path to the channels db file.
+.TP
+.B -w min-width
+Minimum length of a program name.
+.TP
+.B -t
+Sets trailing to true (default false), with trailing turned on tv will try to fetch yesterdays
+program and show all programs ending today.
+.TP
+.B -s
+Sort the channels in the same order as selected (default true).
+.TP
+.B -a
+Show aired programs (default true).
+.SH CONFIG SYNTAX
+url = string
+.br
+channels = [strings] 
+.br
+min-width = int
+.br
+show-trailing = bool
+.br
+sort-channels = bool
+.br
+show-aired = bool
+
+.SH AUTHOR
+Per Odlund
+.SH SOURCE
+https://github.com/dagle/hs-xmltv
