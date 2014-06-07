@@ -7,6 +7,8 @@ module Text.XmlTv (
     , parsePrograms
     , filterChans
     , updateChannel
+    , findChan
+    , sortChans
     , previous
     , current
     , later
@@ -85,6 +87,13 @@ filterChans f chans =
     let pure = catMaybes chans
     in filter f pure
 
+sortChans :: [String] -> [Channel] -> [Channel]
+sortChans strs chans =
+    map (findChan chans) strs
+
+findChan :: [Channel] -> String -> Channel
+findChan chans str = 
+    head . filter ((==) str . name) $ chans
 -- takes a channel, a prefix and a fetch method;
 -- then etches all programs for that channel using prefix
 -- (often date).
@@ -92,4 +101,4 @@ filterChans f chans =
 updateChannel prefix fetch c = do
     let url = base c ++ cid c ++ prefix 
     tv <- liftM (catMaybes . parsePrograms) . fetch $ url
-    return c { programs = tv}
+    return c { programs = (programs c) ++ tv}
