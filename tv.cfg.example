@@ -1,0 +1,6 @@
+url = "http://tv.swedb.se/xmltv/channels.xml.gz"
+channels = ["SVT 1", "SVT 2"]
+min-width = 20
+show-trailing = true
+sort-channels = true
+show-aired = true
