@@ -198,7 +198,7 @@ getConfig paths = do
     cfg <- CFG.load paths
     url <- CFG.require cfg "url"
     chans <- liftM (fromMaybe []) $ getHomoList cfg "channels" -- CFG.lookup cfg "channels" :: IO (Maybe [String])
-    minWidth <- liftM (fromMaybe 20) $ CFG.lookup cfg "minW-width"
+    minWidth <- liftM (fromMaybe 20) $ CFG.lookup cfg "min-width"
     --colors <- liftM (fromMaybe (white, red, magenta, white)) $ CFG.lookup cfg "colors"
     colors <- return $ (white, red, magenta, white)
     yester <- liftM (fromMaybe True) $ CFG.lookup cfg "show-trailing"
