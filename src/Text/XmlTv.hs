@@ -18,7 +18,6 @@ import Control.Monad
 import Data.Maybe
 import Text.XML.Light
 import Data.Time
-import Data.Time.Clock
 import System.Locale
 
 data Channel = Channel {
