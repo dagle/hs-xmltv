@@ -121,11 +121,11 @@ getTvDay cfg = do
                mapM (updateChannel (toPrefix (showDay (tz cfg) day)) getAny) k'
         else mapM (updateChannel (toPrefix (showDay (tz cfg) day)) getAny) fc
     where
-        toPrefix date = "_" ++ date ++ ".getAny.gz"
+        toPrefix date = "_" ++ date ++ ".xml.gz"
 
 showTvDay :: XmlTvPP -> IO ()
 showTvDay cfg = do
     chans <-  getTvDay cfg
     let schans = if doSort cfg then sortChans (channels cfg) chans else chans
-    display $ showPrograms cfg chans
+    display $ showPrograms cfg schans
 
