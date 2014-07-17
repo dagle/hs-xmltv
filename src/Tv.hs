@@ -1,11 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Data.Time.LocalTime
-import System.Console.Terminfo.Base
-import Text.XmlTv
 import Data.Time.Clock
 import Data.Maybe
-import Data.Time
 import Control.Monad
 import System.Environment
 import qualified Data.Configurator as CFG

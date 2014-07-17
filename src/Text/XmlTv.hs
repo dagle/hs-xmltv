@@ -96,7 +96,7 @@ findChan chans str =
 -- takes a channel, a prefix and a fetch method;
 -- then etches all programs for that channel using prefix
 -- (often date).
---updateChannel :: Channel -> String -> (String -> IO String) -> IO Channel
+updateChannel :: String -> (String -> IO String) -> Channel -> IO Channel
 updateChannel prefix fetch c = do
     let url = base c ++ cid c ++ prefix 
     tv <- liftM (catMaybes . parsePrograms) . fetch $ url

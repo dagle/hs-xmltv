@@ -18,7 +18,7 @@ conv s = LB.fromChunks [C8.pack s]
 reconv = C8.unpack . B.concat . LB.toChunks
 
 -- we support http and local files
---get :: String -> IO (Maybe String)
+get :: String -> IO (Maybe String)
 get url = do
         match url
     where
@@ -26,12 +26,14 @@ get url = do
         match str = (\y -> readFile y >>= return . Just) str
 
 -- a hack for now
+getAny :: [Char] -> IO [Char]
 getAny url = do
     s <- get url
     case s of
         Nothing -> return ""
         (Just u) -> return $ uzip url u
 
+uzip :: FilePath -> String -> [Char]
 uzip url s =
     case takeExtension url of
         ".gz" -> gunzip s
@@ -57,12 +59,14 @@ downloadURL url =
                              rqBody = ""}
           uri = fromJust $ parseURI url
 
+downloadURI :: String -> IO (Maybe String)
 downloadURI url = do
    rsp <- downloadURL url
    case rsp of
     Left _ -> return Nothing
     Right s -> return $ Just s
 
+gunzip :: String -> String
 gunzip str = do
     reconv . decompress . conv $ str
 

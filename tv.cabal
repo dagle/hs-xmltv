@@ -34,7 +34,7 @@ executable tv
                  configurator, filepath
   hs-source-dirs: src 
   main-is: Tv.hs
-  ghc-options: -Wall -rtsopts -threaded
+  ghc-options: -Werror
   ghc-prof-options: -auto-all
 
 source-repository head
