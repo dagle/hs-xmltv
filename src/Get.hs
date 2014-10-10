@@ -11,6 +11,7 @@ import System.Environment.XDG.BaseDir
 import System.Posix.Files
 import Data.Time
 import Data.Time.Clock.POSIX
+import System.FilePath.Posix
 import qualified Data.ByteString.Lazy as BL
 
 getAny :: Bool -> String -> IO [Char]
@@ -43,13 +44,15 @@ today time = do
 writeCache :: String -> ByteString -> IO ()
 writeCache url str = translate url >>= flip BL.writeFile str
 
--- ewwwwww
+-- This works for now, wont update until more users
 fixname :: [Char] -> [Char]
 fixname s =  
-    if s == s' then s else s' ++ ".xml"
+    if gz == dated then gz else dated ++ ".xml"
     where 
-        s' = takeWhile ((/=) '_') . rdrop 3 $ s
-        rdrop n = reverse . drop n . reverse 
+        gz = gzdrop $ s
+        dated = takeWhile ((/=) '_') gz
+
+gzdrop str = if (takeExtension str) == ".gz" then dropExtension str else str
 
 translate :: String -> IO [Char]
 translate url = do 
