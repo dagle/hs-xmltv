@@ -1,72 +1,77 @@
 module Get (
-    get
-    , getAny
+    getAny
 ) where
 
-import Codec.Compression.GZip
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString.Char8 as C8
-import qualified Data.ByteString as B
-import Network.HTTP
+import Data.ByteString.Lazy.Internal
+import Network.HTTP.Client
 import Network.URI
-import System.FilePath.Posix
-import Data.List
-import Data.Maybe
+import System.IO
+import Control.Exception
+import System.Environment.XDG.BaseDir
+import System.Posix.Files
+import Data.Time
+import Data.Time.Clock.POSIX
+import qualified Data.ByteString.Lazy as BL
 
--- This is really horrible, REALLY
-conv s = LB.fromChunks [C8.pack s]
-reconv = C8.unpack . B.concat . LB.toChunks
+getAny :: Bool -> String -> IO [Char]
+getAny today url = do
+    s <- downloadURI today url
+    return $ unpackChars s
 
--- we support http and local files
-get :: String -> IO (Maybe String)
-get url = do
-        match url
-    where
-        match str | Just _ <- stripPrefix "http" str = downloadURI str
-        match str = (\y -> readFile y >>= return . Just) str
+downloadURL :: String -> IO ByteString
+downloadURL url = do
+    man <- newManager defaultManagerSettings
+    req <- parseUrl url
+    rsp <- httpLbs req man
+    return $ responseBody rsp
 
--- a hack for now
-getAny :: [Char] -> IO [Char]
-getAny url = do
-    s <- get url
-    case s of
-        Nothing -> return ""
-        (Just u) -> return $ uzip url u
+openCache :: String -> IOMode -> IO Handle
+openCache url mode = do 
+    f <- translate url
+    stat <- getFileStatus f
+    bool <- today . modificationTime $ stat
+    if bool then openFile f mode else error "no file"
 
-uzip :: FilePath -> String -> [Char]
-uzip url s =
-    case takeExtension url of
-        ".gz" -> gunzip s
-        _ -> s
+-- this is wrong: should be locale times etc
+today :: Real s => s -> IO Bool
+today time = do
+    c <- getCurrentTime
+    let t = utctDay c
+    let t2 = utctDay . posixSecondsToUTCTime . realToFrac $ time
+    return (t == t2)
 
--- doesn't support https... eeeew
-downloadURL :: String -> IO (Either String String)
-downloadURL url =
-    do resp <- simpleHTTP request
-       case resp of
-         Left x -> return $ Left ("Error connecting: " ++ show x)
-         Right r -> 
-             case rspCode r of
-               (2,_,_) -> return $ Right (rspBody r)
-               (3,_,_) -> -- A HTTP redirect
-                 case findHeader HdrLocation r of
-                   Nothing -> return $ Left (show r)
-                   Just url -> downloadURL url
-               _ -> return $ Left (show r)
-    where request = Request {rqURI = uri,
-                             rqMethod = GET,
-                             rqHeaders = [],
-                             rqBody = ""}
-          uri = fromJust $ parseURI url
+writeCache :: String -> ByteString -> IO ()
+writeCache url str = translate url >>= flip BL.writeFile str
 
-downloadURI :: String -> IO (Maybe String)
-downloadURI url = do
-   rsp <- downloadURL url
-   case rsp of
-    Left _ -> return Nothing
-    Right s -> return $ Just s
+-- ewwwwww
+fixname :: [Char] -> [Char]
+fixname s =  
+    if s == s' then s else s' ++ ".xml"
+    where 
+        s' = takeWhile ((/=) '_') . rdrop 3 $ s
+        rdrop n = reverse . drop n . reverse 
 
-gunzip :: String -> String
-gunzip str = do
-    reconv . decompress . conv $ str
+translate :: String -> IO [Char]
+translate url = do 
+    let f = maybe url uriPath $ parseURI url
+    let f' = fixname f
+    getUserCacheDir "" >>= \x -> return $ x ++ f'
 
+cache :: String -> IO ByteString
+cache url = do
+    r <- mytry $ openCache url ReadMode
+    case r of
+        Left _ -> do
+            rsp <- downloadURL url
+            mytry $ writeCache url rsp
+            return rsp
+        Right f ->
+            BL.hGetContents f >>= return
+
+mytry :: IO a -> IO (Either SomeException a)
+mytry = try
+
+downloadURI :: Bool -> String -> IO ByteString
+downloadURI today url
+    | today = cache url 
+    | otherwise = downloadURL url
