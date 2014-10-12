@@ -5,8 +5,6 @@ tv \- display whats on tv
 .B tv
 [
 .I options
-] [
-.I channels
 ]
 .SH DESCRIPTION
 .B tv
@@ -16,21 +14,17 @@ and requires an url for the channel database. tv support both commandline option
 tv will display all selected channels or if no channels are selected, all channels form the channels db.
 .SH OPTIONS
 .TP
-.B -w url
+.B -u url 
 Path to the channels db file.
 .TP
 .B -w min-width
 Minimum length of a program name.
 .TP
-.B -t
-Sets trailing to true (default false), with trailing turned on tv will try to fetch yesterdays
-program and show all programs ending today.
+.B -t relative time
+Set the day in relative, -1 for yesterday and 1 for tomorrow (default: today).
 .TP
-.B -s
-Sort the channels in the same order as selected (default true).
-.TP
-.B -a
-Show aired programs (default true).
+.B -c [channels]
+Channels to list, an empty list equals all channels (default: all channels).
 .SH CONFIG SYNTAX
 url = string
 .br
