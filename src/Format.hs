@@ -1,5 +1,6 @@
 module Format (
     XmlTvPP(..)
+    , Coloring(..)
     , getCols
     , showTvDay
 ) where
@@ -27,6 +28,7 @@ data XmlTvPP = XmlTvPP {
     , yesterLeft :: Bool -- Show programs from yesterday that haven't haven't aired yet
     , doSort :: Bool
     , showAired :: Bool
+    , today :: Bool
 }
 
 showHour :: UTCTime -> TimeZone -> String
@@ -64,7 +66,7 @@ divide num xs = helper realnum xs
     where 
         len = length xs
         lines = div (len + num) num
-        realnum = ceiling $ (fromIntegral len) / (fromIntegral lines)
+        realnum = ceiling $ ((fromIntegral len) :: Double ) / (fromIntegral lines)
         helper _ [] = []
         helper num xs = cur : helper num after
             where
@@ -108,18 +110,19 @@ yester t =
 
 getTvDay :: XmlTvPP -> IO [Channel]
 getTvDay cfg = do
-   str <- getAny (url cfg)
+   str <- getAny (today cfg) (url cfg)
    let day = currentTime cfg
    let y = yester day -- day - 1
    let chans = parseChannels str
    let fc = filterChans (\a -> elem (name a) (channels cfg)) chans
-   --mapM (updateChannel (toPrefix (showDay (tz cfg) day)) getAny) fc
+   mapM (updateChannel (toPrefix (showDay (tz cfg) day)) (getAny (today cfg))) fc
+   {-
    if yesterLeft cfg 
         then 
             do k <- mapM (updateChannel (toPrefix (showDay (tz cfg) y)) getAny) fc
                let k' = filterToday (currentTime cfg) k
                mapM (updateChannel (toPrefix (showDay (tz cfg) day)) getAny) k'
-        else mapM (updateChannel (toPrefix (showDay (tz cfg) day)) getAny) fc
+        else mapM (updateChannel (toPrefix (showDay (tz cfg) day)) getAny) fc-}
     where
         toPrefix date = "_" ++ date ++ ".xml.gz"
 
@@ -128,4 +131,3 @@ showTvDay cfg = do
     chans <-  getTvDay cfg
     let schans = if doSort cfg then sortChans (channels cfg) chans else chans
     display $ showPrograms cfg schans
-
