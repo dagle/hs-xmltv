@@ -23,18 +23,18 @@ library
   build-depends: base > 3 && < 5, time, old-locale, xml
   hs-source-dirs: src
   exposed-modules: Text.XmlTv
-  ghc-options: -funbox-strict-fields
+  ghc-options: -funbox-strict-fields -O2 -rtsopts
   ghc-prof-options: -auto-all
 
 
 executable tv
   default-language: Haskell2010
-  build-depends: base > 3, xml, zlib, HTTP, network, bytestring, time, 
+  build-depends: base > 3, xml, zlib, network, bytestring, time,
                  terminfo, wl-pprint-terminfo, old-locale, wl-pprint-extras, 
-                 configurator, filepath
+                 configurator, filepath, xdg-basedir, http-client, network-uri, unix
   hs-source-dirs: src 
   main-is: Tv.hs
-  ghc-options: -Werror
+  ghc-options: -Werror -O2 -rtsopts
   ghc-prof-options: -auto-all
 
 source-repository head
